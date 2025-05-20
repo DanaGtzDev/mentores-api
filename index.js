@@ -1,20 +1,14 @@
 const express = require('express');
-const axios = require('axios');
-const dotenv = require('dotenv');
 const { v4: uuidv4 } = require('uuid');
-
-dotenv.config();
+const { fetchRecords } = require('./utils/fetchRecords')
+const { filterExpertos } = require('./utils/filterExpertos')
+const { sendToAirtable } = require('./utils/sendToAirtable');
+const { sendByEmail } = require('./utils/sendByEmail');
 
 const app = express();
 
 app.use(express.json());
 
-const API_TOKEN = process.env.API_TOKEN;
-const BASE_ID = process.env.BASE_ID;
-const IN_TABLE_NAME = process.env.IN_TABLE_NAME;
-const IN_BASE_URL = `https://api.airtable.com/v0/${BASE_ID}/${IN_TABLE_NAME}`;
-const OUT_TABLE_NAME = process.env.OUT_TABLE_NAME;
-const OUT_BASE_URL = `https://api.airtable.com/v0/${BASE_ID}/${OUT_TABLE_NAME}`
 
 app.post('/filter-expertos', async (req, res) => {
   try {
@@ -34,7 +28,8 @@ app.post('/filter-expertos', async (req, res) => {
       };
     });
     const records = {"records": result}
-    sendToAirtable(records)
+    sendByEmail(query,records)
+    //sendToAirtable(records)
     
     res.json({"response": "Records saved correctly"});
   } catch (error) {
@@ -43,47 +38,6 @@ app.post('/filter-expertos', async (req, res) => {
   }
 });
 
-
-async function fetchRecords() {
-  try {
-    const response = await axios.get(IN_BASE_URL, {
-      headers: {
-        Authorization: `Bearer ${API_TOKEN}`
-      }
-    });
-    return response.data.records;
-  } catch (error) {
-    console.error('Error:', error.response?.status, error.message);
-    throw new Error('Failed to fetch records');
-  }
-}
-
-const filterExpertos = (query, data) => {
-  return data.filter(item =>
-    (item.fields?.['Verticals']?.some(v => query['vertical']?.includes(v)) ?? false) &&
-    (item.fields?.['Languages']?.some(l => query['language']?.includes(l)) ?? false) &&
-    (item.fields?.['Entrepreneur Superpowers']?.some(es => query['entrepreneur_superpower']?.includes(es)) ?? false) &&
-    (item.fields?.['Main approach']?.some(ma => query['main_approach']?.includes(ma)) ?? false)
-  );
-};
-
-async function sendToAirtable(data) {
-  try {
-    const response = await axios.post(
-      OUT_BASE_URL,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${API_TOKEN}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    console.log('Airtable response:', response.data);
-  } catch (error) {
-    console.error('Error sending to Airtable:', error.response?.data || error.message);
-  }
-}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
