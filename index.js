@@ -29,7 +29,7 @@ app.post('/filter-expertos', async (req, res) => {
     });
     const records = {"records": result}
     sendByEmail(query,records)
-    //sendToAirtable(records)
+    sendToAirtable(records)
     
     res.json({"response": "Records saved correctly"});
   } catch (error) {
